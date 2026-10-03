@@ -1,0 +1,20 @@
+PANMASTER — INVENTARIO SEPARADO POR MÓDULOS
+
+CAMBIO PRINCIPAL
+- Al entrar en “Productos e inventario”, se muestran los módulos de inventario activos.
+- Al abrir “Inventario Cocina”, la tabla solo consulta productos con products.module_id igual al ID de Cocina.
+- Al crear un producto dentro de un módulo, el módulo queda asignado automáticamente.
+- “Volver a módulos” permite cambiar de inventario.
+- Los productos antiguos con module_id NULL aparecen en “Productos sin módulo asignado” para no ocultarlos. Desde ahí se pueden editar y asignar a un módulo.
+- El contador de productos por módulo se actualiza tras crear o eliminar productos.
+
+INSTALACIÓN
+1. Haz una copia de tu proyecto actual.
+2. Copia los archivos de este proyecto a tu carpeta de trabajo, conservando tu .env real (no está incluido en este ZIP).
+3. Instala dependencias con npm install y ejecuta npm run dev.
+4. Entra como superadministrador, crea módulos en “Módulos de inventario” y luego abre “Productos e inventario”.
+
+SUPABASE
+Esta corrección usa la columna products.module_id que ya existe en el esquema de este proyecto. No requiere ejecutar SQL nuevo para filtrar por módulo.
+No ejecutes schema.sql ni supabase_schema.sql completos sobre una base existente: pueden corresponder a un esquema inicial/alternativo.
+No borres migraciones ni tablas. La compilación completa y la conexión con el Supabase real deben verificarse en tu entorno porque las dependencias no pudieron instalarse en este entorno.

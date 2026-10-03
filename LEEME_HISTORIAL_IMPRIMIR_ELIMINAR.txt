@@ -1,0 +1,21 @@
+PANMASTER — HISTORIAL DE MOVIMIENTOS
+
+CAMBIOS
+- En Historial de movimientos guardados hay botones para descargar el historial en Excel (.xlsx) e imprimirlo.
+- El historial respeta la búsqueda y el filtro por inventario seleccionados.
+- Cada fila tiene una acción para eliminar movimientos manuales.
+- La eliminación usa una función SQL transaccional que revierte el stock antes de borrar el movimiento.
+- Solo el superadministrador puede eliminar movimientos.
+- Por seguridad, la función SQL solo elimina manual_in/manual_out. Para otros tipos de movimiento, debe hacerse un ajuste de inventario.
+
+PASOS
+1. Haz una copia del proyecto actual y conserva tu archivo .env.
+2. En Supabase > SQL Editor, ejecuta el archivo:
+   supabase/delete_inventory_movement_reversibly.sql
+3. Abre el proyecto en VS Code, ejecuta npm install y npm run dev.
+4. Entra como superadministrador > Entradas y salidas > Historial de movimientos guardados.
+5. Prueba Descargar historial Excel e Imprimir historial.
+6. Antes de eliminar un movimiento real, verifica el producto y la cantidad. La eliminación es definitiva y cambia las existencias.
+
+NOTA
+El código debe probarse contra el proyecto Supabase real, ya que no se dispone de conexión a esa base de datos desde este entorno.

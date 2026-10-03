@@ -1,0 +1,28 @@
+PANMASTER — ETIQUETAS DESDE INVENTARIO
+
+CAMBIO
+- Se agregó la opción “Imprimir etiquetas” al menú.
+- Se selecciona primero el módulo de inventario y después un producto existente de ese módulo.
+- No se crea un registro de producción ni se duplica el producto para imprimir.
+- La etiqueta toma el nombre del producto (name_es, name o name_en) y la fecha actual del equipo.
+- Incluye “Elaborado por:” con una línea en blanco para escribir el nombre a mano.
+- Tamaño de impresión configurado en 4 × 6 pulgadas.
+- El botón abre una ventana de impresión; si no se abre, permite ventanas emergentes para el sitio.
+
+INSTALACIÓN
+1. Haz una copia de tu proyecto actual.
+2. Descomprime el ZIP y conserva tu archivo .env actual (no viene incluido).
+3. Abre la carpeta en VS Code y ejecuta npm install; luego npm run dev.
+4. Entra a “Imprimir etiquetas”, selecciona módulo y producto y pulsa “Imprimir etiqueta 4 × 6”.
+5. En el diálogo de impresión selecciona la impresora térmica, tamaño 4 × 6 pulgadas y escala 100%/Tamaño real. Desactiva encabezados y pies de página del navegador si aparecen.
+
+SUPABASE / RLS
+Si la lista de módulos o productos muestra un error de permisos, abre y revisa
+supabase/labels_inventory_read_policy.sql en SQL Editor. Es una política solo de lectura
+para cuentas autenticadas con perfil activo; no da permiso de guardar, editar o eliminar.
+No ejecutes schema.sql ni supabase_schema.sql para este cambio.
+
+NOTA DE VERIFICACIÓN
+El archivo se preparó en el código fuente. La compilación completa no pudo verificarse en
+este entorno porque las dependencias npm no estuvieron disponibles antes del tiempo límite.
+Prueba primero en el navegador y confirma el diálogo de impresión con la impresora real.
