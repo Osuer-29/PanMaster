@@ -1,0 +1,63 @@
+import { PGlite } from '@electric-sql/pglite';
+import { readFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const migration=await readFile(new URL('../supabase/migrations/20261004_recipes_stock_traceability.sql',import.meta.url),'utf8');
+const admin='00000000-0000-4000-8000-000000000001';
+const p1='00000000-0000-4000-8000-000000000002';
+const p2='00000000-0000-4000-8000-000000000003';
+for(const modern of [false,true]){
+ const db=new PGlite();
+ await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE SCHEMA auth;
+ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+ CREATE TABLE profiles(id uuid PRIMARY KEY,role text,active boolean,full_name text,email text);
+ CREATE TABLE inventory_modules(id uuid PRIMARY KEY,name text);
+ CREATE TABLE products(id uuid PRIMARY KEY,name text,name_es text,unit text,unit_id uuid,module_id uuid,stock numeric(14,3),active boolean DEFAULT true,updated_at timestamptz DEFAULT now());
+ CREATE TABLE recipes(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),name text NOT NULL,ingredients_text text,notes text,instructions text,active boolean DEFAULT true,created_by uuid,updated_at timestamptz DEFAULT now(),product_id uuid);
+ ${modern?"CREATE TYPE movement_enum AS ENUM('manual_in','manual_out','count_adjustment');":''}
+ CREATE TABLE inventory_movements(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),product_id uuid REFERENCES products,movement_type ${modern?'movement_enum':"text CHECK(movement_type IN ('entrada','salida','ajuste'))"},quantity numeric(14,3) NOT NULL CHECK(quantity>=0),reason text,notes text,created_by uuid,created_at timestamptz DEFAULT now());
+ INSERT INTO profiles VALUES('${admin}','superadmin',true,'Administrador','admin@example.com');
+ INSERT INTO products(id,name,name_es,unit,stock) VALUES('${p1}','Harina','Harina','kg',10),('${p2}','Azúcar','Azúcar','kg',5);
+ INSERT INTO inventory_movements(product_id,movement_type,quantity,reason) VALUES('${p2}','${modern?'manual_out':'salida'}',1,'Histórico anterior');
+ SELECT set_config('request.jwt.claim.sub','${admin}',false);`);
+ await db.exec(migration);
+ await db.exec(migration); // instalación repetida no duplica triggers ni modifica saldos
+ const stock=async id=>(await db.query('SELECT stock FROM products WHERE id=$1',[id])).rows[0].stock;
+ const recipe='00000000-0000-4000-8000-000000000010';
+ await db.query('SELECT save_panmaster_recipe($1,$2,$3,$4,true)',[recipe,'Pan','Harina | 2 kg',null]);
+ await db.query('UPDATE recipes SET product_id=$1 WHERE id=$2',[p1,recipe]);
+ await db.query('SELECT save_panmaster_recipe($1,$2,$3,$4,false)',[recipe,'Pan editado','Harina | 3 kg','Hornear']);
+ assert.equal((await db.query('SELECT product_id FROM recipes WHERE id=$1',[recipe])).rows[0].product_id,p1);
+ await db.query('SELECT save_panmaster_recipe($1,$2,$3,$4,true)',[recipe,'Pan editado','Harina | 3 kg','Hornear']);
+ assert.equal((await db.query('SELECT count(*)::int AS n FROM recipes')).rows[0].n,1);
+ await assert.rejects(db.query('SELECT save_panmaster_recipe($1,$2,$3,$4,false)',['00000000-0000-4000-8000-000000000099','Falta','Harina',null]),/no existe/);
+ const batch='00000000-0000-4000-8000-000000000011';
+ const items=[{product_id:p1,direction:'out',quantity:3}];
+ const save=async (id,values)=>(await db.query('SELECT record_panmaster_inventory_batch($1,$2::jsonb) AS receipt',[id,JSON.stringify(values)])).rows[0].receipt;
+ const receipt=await save(batch,items);assert.equal(Number(await stock(p1)),7);
+ assert.equal(Number(receipt.movements[0].quantity_before),10);assert.equal(Number(receipt.movements[0].quantity_after),7);
+ assert.equal(receipt.movements[0].actor_name_snapshot,'Administrador');
+ await save(batch,items);assert.equal(Number(await stock(p1)),7);
+ await assert.rejects(save(batch,[{product_id:p1,direction:'out',quantity:4}]),/otro lote/);
+ await assert.rejects(save('00000000-0000-4000-8000-000000000012',[{product_id:p1,direction:'in',quantity:2},{product_id:p2,direction:'out',quantity:200}]),/insuficiente/);
+ assert.equal(Number(await stock(p1)),7);assert.equal(Number(await stock(p2)),5);
+ assert.equal((await db.query('SELECT count(*)::int n FROM inventory_movements')).rows[0].n,2);
+ await assert.rejects(save('00000000-0000-4000-8000-000000000013',[{product_id:p1,direction:'out',quantity:-2}]),/inválida|check/);
+ await db.query('SELECT delete_inventory_movement_reversibly($1)',[receipt.movements[0].id]);assert.equal(Number(await stock(p1)),10);
+ await db.query('SELECT delete_inventory_movement_reversibly($1)',[receipt.movements[0].id]);assert.equal(Number(await stock(p1)),10);
+ assert.equal((await db.query('SELECT count(*)::int n FROM inventory_movements')).rows[0].n,3);
+ assert.equal((await db.query('SELECT count(*)::int n FROM panmaster_inventory_audit')).rows[0].n,3);
+ await save('00000000-0000-4000-8000-000000000014',[{product_id:p1,direction:'in',quantity:2},{product_id:p1,direction:'out',quantity:4}]);assert.equal(Number(await stock(p1)),8);
+ await save('00000000-0000-4000-8000-000000000015',[{product_id:p1,direction:'adjustment',quantity:0}]);assert.equal(Number(await stock(p1)),0);
+ const entry=(await db.query("SELECT id FROM inventory_movements WHERE product_id=$1 AND direction='in' AND reversal_of IS NULL LIMIT 1",[p1])).rows[0];
+ await assert.rejects(db.query('SELECT delete_inventory_movement_reversibly($1)',[entry.id]),/insuficiente/);
+ assert.equal(Number(await stock(p1)),0);
+ await db.exec(migration);assert.equal(Number(await stock(p1)),0);assert.equal(Number(await stock(p2)),5);
+ assert.equal((await db.query("SELECT count(*)::int n FROM inventory_movements WHERE reason='Histórico anterior'")).rows[0].n,1);
+ await db.exec("SELECT set_config('request.jwt.claim.sub','',false)");
+ await assert.rejects(save('00000000-0000-4000-8000-000000000016',items),/superadministrador/);
+ await db.exec(`SELECT set_config('request.jwt.claim.sub','${admin}',false); UPDATE profiles SET role='employee';`);
+ await assert.rejects(db.query('SELECT save_panmaster_recipe($1,$2,$3,$4,true)',[recipe,'Otra','Harina',null]),/superadministrador/);
+ console.log('OK '+(modern?'enum moderno':'CHECK legado')+': crear/editar receta, conservación de relación, reintentos, stock 10→7, lote atómico, anulación auditada, entrada+salida, ajuste cero y permisos.');
+ await db.close();
+}
+

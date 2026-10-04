@@ -18,3 +18,5 @@
 .quantity-cell{font-variant-numeric:tabular-nums;white-space:nowrap}
 @media(max-width:760px){.module-filter{max-width:100%;width:100%}.toolbar-actions:has(.module-filter){width:100%}.movement-sheet{min-width:820px}}
 @media print{.movement-sheet .movement-entry-col,.movement-sheet .movement-exit-col{border-left:3px solid #f28c28!important;border-right:3px solid #f28c28!important}}
+/* Hoja de movimientos: ambas cantidades se editan con la misma legibilidad. */
+.movement-entry-col input { width: 100%; min-width: 90px; max-width: 130px; padding: 9px 10px; border: 1px solid #b9c8be; border-radius: 6px; text-align: center; font: inherit; }
