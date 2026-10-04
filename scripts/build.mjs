@@ -1,11 +1,17 @@
-<!doctype html>
+import { build } from 'vite';
+import { writeFile } from 'node:fs/promises';
+
+await build();
+
+function html(prefix) {
+  return `<!doctype html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#176b4d">
   <title>Panadería | Inventario y producción</title>
-  <link rel="stylesheet" href="./publicacion/panmaster.css">
+  <link rel="stylesheet" href="${prefix}panmaster.css">
 </head>
 <body>
   <div id="root"><div style="font-family:Arial,sans-serif;padding:32px"><h1>Abriendo PanMaster…</h1><p id="inicio-estado">Cargando la aplicación.</p></div></div>
@@ -16,7 +22,15 @@
     };
     window.addEventListener('error', function () { window.panmasterLoadError(); });
   </script>
-  <script defer src="./publicacion/panmaster.js" onerror="panmasterLoadError()"></script>
+  <script defer src="${prefix}panmaster.js" onerror="panmasterLoadError()"></script>
   <noscript>Activa JavaScript en tu navegador para abrir PanMaster.</noscript>
 </body>
 </html>
+`;
+}
+
+await writeFile('publicacion/index.html', html('./'), 'utf8');
+await writeFile('publicacion/.nojekyll', '', 'utf8');
+await writeFile('index.html', html('./publicacion/'), 'utf8');
+await writeFile('.nojekyll', '', 'utf8');
+console.log('Listo: index.html se abre directamente; publicacion/ está preparada para Pages.');

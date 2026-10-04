@@ -4,8 +4,8 @@
   "version": "1.0.2",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build",
+    "dev": "vite --host 0.0.0.0 --open /app.html",
+    "build": "tsc --noEmit && node scripts/build.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
