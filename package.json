@@ -3,9 +3,18 @@
   "private": true,
   "version": "1.0.2",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
+<<<<<<< HEAD
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "build:desktop": "tsc --noEmit && vite build --mode desktop",
+    "build:win": "npm run build:desktop && electron-builder --win nsis",
+    "start:desktop": "npm run build:desktop && electron .",
+=======
     "dev": "vite --host 0.0.0.0 --open /app.html",
     "build": "tsc --noEmit && node scripts/build.mjs",
+>>>>>>> 74e96a59893b11d6eb11650382b6999f9f07f4b5
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
@@ -22,7 +31,31 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^41.7.1",
+    "electron-builder": "^26.15.3",
+    "npm": "^11.21.0",
+    "nstall": "^0.2.0",
     "typescript": "^5.7.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "vite-plugin-pwa": "^2.0.0"
+  },
+  "build": {
+    "appId": "com.panmaster.inventory",
+    "productName": "PanMaster",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
